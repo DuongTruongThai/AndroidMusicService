@@ -9,39 +9,38 @@ import android.os.Bundle
 import android.os.Handler
 import android.widget.SeekBar
 import com.example.musicplayerapp.databinding.ActivityMusicPlayerBinding
+import java.util.*
 
 class MusicPlayerActivity : AppCompatActivity() {
 
-    lateinit var binding: ActivityMusicPlayerBinding
+    private val binding: ActivityMusicPlayerBinding by lazy { ActivityMusicPlayerBinding.inflate(layoutInflater) }
     lateinit var serviceIntent: Intent
     var serviceStarted = false
     var musicDuration = 0
     var musicCurrentPosition = 0
-    lateinit var runnable: Runnable
-    private var handler = Handler()
+    private val timer = Timer()
+    private var isReceiverRegistered = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMusicPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         var songIntent = intent
 
         binding.tvMusicTitle.text = songIntent.getStringExtra("songTitle")
 
-        MusicService.songToPlay = songIntent.getIntExtra("songId",0)
+        MusicService.songToPlay = songIntent.getIntExtra("songId", 0)
         serviceIntent = Intent(applicationContext, MusicService::class.java)
         serviceIntent.setAction("NoAction")
 
         binding.apply {
             btnPlay.setOnClickListener {
-                if (!serviceStarted){
+                if (!serviceStarted) {
                     binding.btnPlay.setImageResource(R.drawable.ic_baseline_pause_24)
                     serviceStarted = true
                     startService(serviceIntent)
-                    registerReceiver(getMusicDuration, IntentFilter("sendMusicDuration"))
-                }
-                else{
+                    registerReceiver(musicInfoReceiver, IntentFilter("sendMusicDuration"))
+                } else {
                     binding.btnPlay.setImageResource(R.drawable.ic_baseline_play_arrow_24)
                     serviceStarted = false
                     MusicService.player.pause()
@@ -51,20 +50,29 @@ class MusicPlayerActivity : AppCompatActivity() {
         }
     }
 
-    private val getMusicDuration: BroadcastReceiver = object : BroadcastReceiver(){
+    private val musicInfoReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent != null) {
-                musicDuration = intent.getIntExtra("musicDuration", 0)
+            isReceiverRegistered = true
+            val intentAction = intent?.action.toString()
+            if (intentAction.equals("sendMusicDuration")) {
+                if (intent != null) {
+                    musicDuration = intent.getIntExtra("musicDuration", 0)
+                }
                 updateSeekBar()
+            } else if (intentAction.equals("sendCurrentPosition")) {
+                if (intent != null) {
+                    musicCurrentPosition = intent.getIntExtra("currentPosition", 0)
+                    timer.scheduleAtFixedRate(UpdateSeekBarProgress(), 0, 500)
+                }
             }
         }
     }
 
     private fun updateSeekBar() {
         binding.seekBar.max = musicDuration
-        binding.seekBar.setOnSeekBarChangeListener(object: SeekBar.OnSeekBarChangeListener {
+        binding.seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(p0: SeekBar?, pos: Int, changed: Boolean) {
-                if (changed){
+                if (changed) {
                     MusicService.player.seekTo(pos)
                 }
             }
@@ -78,26 +86,22 @@ class MusicPlayerActivity : AppCompatActivity() {
             }
         })
 
-        registerReceiver(getMusicCurrentPosition, IntentFilter("sendCurrentPosition"))
+        registerReceiver(musicInfoReceiver, IntentFilter("sendCurrentPosition"))
     }
 
-    private val getMusicCurrentPosition: BroadcastReceiver = object : BroadcastReceiver(){
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent != null) {
-                musicCurrentPosition = intent.getIntExtra("currentPosition", 0)
-                runnable = Runnable {
-                    binding.seekBar.progress = musicCurrentPosition
-                    handler.postDelayed(runnable, 1000)
-                }
-                handler.postDelayed(runnable, 1000)
-            }
+    private inner class UpdateSeekBarProgress() : TimerTask() {
+        override fun run() {
+            binding.seekBar.progress = musicCurrentPosition
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (this::runnable.isInitialized)
-            handler.removeCallbacks(runnable)
+        timer.cancel()
+        timer.purge()
+        if (isReceiverRegistered){
+            unregisterReceiver(musicInfoReceiver)
+        }
         stopService(serviceIntent)
     }
 }

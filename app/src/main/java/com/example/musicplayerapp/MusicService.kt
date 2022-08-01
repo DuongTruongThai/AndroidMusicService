@@ -19,7 +19,7 @@ class MusicService : Service() {
 
     override fun onStartCommand(intent: Intent, flag: Int, startId: Int): Int{
 
-        timer.scheduleAtFixedRate(SendCurrentPosition(),0,1000)
+        timer.scheduleAtFixedRate(SendCurrentPosition(),0,500)
 
         if (!player.isPlaying){
             player.start()
@@ -48,6 +48,7 @@ class MusicService : Service() {
         player.reset()
         player.release()
         timer.cancel()
+        timer.purge()
     }
 
     override fun onBind(p0: Intent?): IBinder? {

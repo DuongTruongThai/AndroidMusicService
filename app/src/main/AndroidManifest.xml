@@ -11,6 +11,7 @@
         android:theme="@style/Theme.MusicPlayerApp">
         <activity
             android:name=".MusicPlayerActivity"
+            android:screenOrientation="portrait"
             android:exported="false" />
         <activity
             android:name=".MainActivity"

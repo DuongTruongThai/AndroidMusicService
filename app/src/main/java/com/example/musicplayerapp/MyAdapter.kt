@@ -6,16 +6,17 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class MyAdapter : RecyclerView.Adapter<MyAdapter.MyViewHolder>(){
+class MyAdapter constructor(var onItemClick: ((SongData) -> Unit)) :
+    RecyclerView.Adapter<MyAdapter.MyViewHolder>() {
 
-    var onItemClick : ((SongData) -> Unit)? = null
     private var list: List<SongData> = ArrayList()
-    public fun setData(list: List<SongData>){
+    public fun setData(list: List<SongData>) {
         this.list = list;
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
-        val itemView = LayoutInflater.from(parent.context).inflate(R.layout.list_item, parent,false)
+        val itemView =
+            LayoutInflater.from(parent.context).inflate(R.layout.list_item, parent, false)
         return MyViewHolder(itemView)
     }
 
@@ -27,11 +28,11 @@ class MyAdapter : RecyclerView.Adapter<MyAdapter.MyViewHolder>(){
         return list.size
     }
 
-    inner class MyViewHolder constructor (itemView: View) : RecyclerView.ViewHolder(itemView){
-        private val itemText : TextView = itemView.findViewById(R.id.tvSongName);
+    inner class MyViewHolder constructor(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val itemText: TextView = itemView.findViewById(R.id.tvSongName);
 
-        fun bindingData(songData: SongData){
-            itemText.text = songData.title.toString()
+        fun bindingData(songData: SongData) {
+            itemText.text = songData.title
         }
 
         init {
